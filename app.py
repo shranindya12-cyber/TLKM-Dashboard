@@ -1,72 +1,280 @@
-
-
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
+from datetime import datetime
+
+# ======================================================
+# PAGE CONFIG
+# ======================================================
 
 st.set_page_config(
-    page_title="TLKM Dashboard",
+    page_title="Dashboard Analisis Saham TLKM",
     layout="wide"
 )
+
+# ======================================================
+# LOAD DATA
+# ======================================================
 
 df = pd.read_csv("TLKM.csv")
 
 forecast = pd.read_csv("forecast.csv")
 
-summary = pd.read_csv(
-    "summary_stats.csv"
+# ======================================================
+# PREPROCESSING
+# ======================================================
+
+df["date"] = pd.to_datetime(df["date"])
+
+forecast["date"] = pd.to_datetime(
+    forecast["date"]
 )
 
-st.title("Dashboard Saham TLKM")
+# ======================================================
+# SIDEBAR FILTER
+# ======================================================
+
+st.sidebar.title("Filter Dashboard")
+
+periode = st.sidebar.selectbox(
+
+    "Pilih Periode",
+
+    [
+        "7 Hari",
+        "1 Bulan",
+        "6 Bulan",
+        "1 Tahun",
+        "2 Tahun",
+        "6 Tahun",
+        "10 Tahun",
+        "Max"
+    ]
+)
+
+# ======================================================
+# FILTER DATA
+# ======================================================
+
+today = df["date"].max()
+
+if periode == "7 Hari":
+    filtered_df = df[
+        df["date"] >= today - pd.Timedelta(days=7)
+    ]
+
+elif periode == "1 Bulan":
+    filtered_df = df[
+        df["date"] >= today - pd.Timedelta(days=30)
+    ]
+
+elif periode == "6 Bulan":
+    filtered_df = df[
+        df["date"] >= today - pd.Timedelta(days=180)
+    ]
+
+elif periode == "1 Tahun":
+    filtered_df = df[
+        df["date"] >= today - pd.Timedelta(days=365)
+    ]
+
+elif periode == "2 Tahun":
+    filtered_df = df[
+        df["date"] >= today - pd.Timedelta(days=730)
+    ]
+
+elif periode == "6 Tahun":
+    filtered_df = df[
+        df["date"] >= today - pd.Timedelta(days=2190)
+    ]
+
+elif periode == "10 Tahun":
+    filtered_df = df[
+        df["date"] >= today - pd.Timedelta(days=3650)
+    ]
+
+else:
+    filtered_df = df.copy()
+
+# ======================================================
+# HEADER
+# ======================================================
+
+st.title("Dashboard Analisis Saham TLKM")
 
 st.caption(
-    "Data diperbarui otomatis setiap hari pukul 10.00 WIB"
+    "Realtime Market Dashboard • Update Otomatis Setiap Hari Pukul 10.00 WIB"
 )
 
-last_update = df["date"].iloc[-1]
+# ======================================================
+# LATEST PRICE
+# ======================================================
 
-st.write(
-    f"Last Updated: {last_update}"
+latest_close = filtered_df["close"].iloc[-1]
+
+previous_close = filtered_df["close"].iloc[-2]
+
+price_change = (
+    latest_close - previous_close
 )
 
-col1, col2, col3, col4 = st.columns(4)
+percent_change = (
+    price_change / previous_close
+) * 100
+
+latest_volume = (
+    filtered_df["volume"].iloc[-1]
+)
+
+# ======================================================
+# METRICS
+# ======================================================
+
+col1, col2, col3 = st.columns(3)
 
 col1.metric(
+
     "Latest Price",
-    round(df["close"].iloc[-1],2)
+
+    f"{latest_close:,.0f}",
+
+    f"{price_change:,.0f} ({percent_change:.2f}%)"
 )
 
 col2.metric(
-    "Highest Price",
-    round(df["close"].max(),2)
+
+    "Volume",
+
+    f"{latest_volume:,.0f}"
 )
 
 col3.metric(
-    "Lowest Price",
-    round(df["close"].min(),2)
-)
 
-col4.metric(
     "Volatility",
-    round(df["volatility"].mean(),4)
+
+    f"{filtered_df['volatility'].mean():.4f}"
 )
 
-st.subheader(
-    "Trend Harga Saham"
+# ======================================================
+# STATISTIK
+# ======================================================
+
+st.subheader("Analisis Statistik")
+
+stat1, stat2, stat3, stat4 = st.columns(4)
+
+stat1.metric(
+
+    "Average Open",
+
+    round(
+        filtered_df["open"].mean(),
+        2
+    )
 )
 
-fig1 = px.line(
+stat2.metric(
 
-    df.tail(365),
+    "Average Close",
 
-    x="date",
+    round(
+        filtered_df["close"].mean(),
+        2
+    )
+)
 
-    y=[
-        "close",
-        "MA20",
-        "MA50",
-        "MA200"
-    ]
+stat3.metric(
+
+    "Highest Price",
+
+    round(
+        filtered_df["high"].max(),
+        2
+    )
+)
+
+stat4.metric(
+
+    "Lowest Price",
+
+    round(
+        filtered_df["low"].min(),
+        2
+    )
+)
+
+# ======================================================
+# MOVING AVERAGE
+# ======================================================
+
+filtered_df["MA7"] = (
+    filtered_df["close"]
+    .rolling(7)
+    .mean()
+)
+
+filtered_df["MA30"] = (
+    filtered_df["close"]
+    .rolling(30)
+    .mean()
+)
+
+# ======================================================
+# HARGA SAHAM
+# ======================================================
+
+st.subheader("Pergerakan Harga Saham")
+
+fig1 = go.Figure()
+
+fig1.add_trace(
+
+    go.Scatter(
+
+        x=filtered_df["date"],
+
+        y=filtered_df["close"],
+
+        mode="lines",
+
+        name="Harga"
+    )
+)
+
+fig1.add_trace(
+
+    go.Scatter(
+
+        x=filtered_df["date"],
+
+        y=filtered_df["MA7"],
+
+        mode="lines",
+
+        name="MA7"
+    )
+)
+
+fig1.add_trace(
+
+    go.Scatter(
+
+        x=filtered_df["date"],
+
+        y=filtered_df["MA30"],
+
+        mode="lines",
+
+        name="MA30"
+    )
+)
+
+fig1.update_layout(
+
+    height=500,
+
+    template="plotly_dark"
 )
 
 st.plotly_chart(
@@ -74,17 +282,23 @@ st.plotly_chart(
     use_container_width=True
 )
 
-st.subheader(
-    "Volume Transaksi"
-)
+# ======================================================
+# VOLUME
+# ======================================================
+
+st.subheader("Volume Trading")
 
 fig2 = px.bar(
 
-    df.tail(365),
+    filtered_df,
 
     x="date",
 
     y="volume"
+)
+
+fig2.update_layout(
+    template="plotly_dark"
 )
 
 st.plotly_chart(
@@ -92,17 +306,23 @@ st.plotly_chart(
     use_container_width=True
 )
 
-st.subheader(
-    "Rolling Volatility"
-)
+# ======================================================
+# VOLATILITY
+# ======================================================
+
+st.subheader("Analisis Volatilitas")
 
 fig3 = px.line(
 
-    df.tail(365),
+    filtered_df,
 
     x="date",
 
     y="volatility"
+)
+
+fig3.update_layout(
+    template="plotly_dark"
 )
 
 st.plotly_chart(
@@ -110,9 +330,11 @@ st.plotly_chart(
     use_container_width=True
 )
 
-st.subheader(
-    "Forecast 30 Hari"
-)
+# ======================================================
+# FORECAST
+# ======================================================
+
+st.subheader("Forecast 30 Hari (LSTM)")
 
 fig4 = px.line(
 
@@ -123,8 +345,19 @@ fig4 = px.line(
     y="forecast"
 )
 
+fig4.update_layout(
+    template="plotly_dark"
+)
+
 st.plotly_chart(
     fig4,
     use_container_width=True
 )
 
+# ======================================================
+# LAST UPDATE
+# ======================================================
+
+st.caption(
+    f"Last Updated : {today}"
+)
