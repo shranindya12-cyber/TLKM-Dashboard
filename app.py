@@ -111,9 +111,9 @@ st.caption(
 # LATEST PRICE
 # ======================================================
 
-latest_close = filtered_df["close"].iloc[-1]
+latest_close = filtered_df["open"].iloc[-1]
 
-previous_close = filtered_df["close"].iloc[-2]
+previous_close = filtered_df["open"].iloc[-2]
 
 price_change = (
     latest_close - previous_close
