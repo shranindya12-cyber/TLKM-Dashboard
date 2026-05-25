@@ -7,6 +7,5 @@ plotly
 yfinance
 matplotlib
 seaborn
-tensorflow
 scikit-learn
 
