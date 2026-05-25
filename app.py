@@ -9,84 +9,8 @@ import plotly.express as px
 
 st.set_page_config(
     page_title="TLKM Stock Dashboard",
-    page_icon="📈",
     layout="wide"
 )
-
-# ======================================================
-# CUSTOM CSS
-# ======================================================
-
-st.markdown("""
-<style>
-
-.main {
-    background-color: #081028;
-}
-
-[data-testid="stSidebar"] {
-    background-color: #0E1726;
-}
-
-h1, h2, h3, h4 {
-    color: white;
-}
-
-.metric-card {
-    background: linear-gradient(
-        145deg,
-        #111827,
-        #1F2937
-    );
-
-    padding: 20px;
-    border-radius: 18px;
-
-    border: 1px solid rgba(255,255,255,0.08);
-
-    box-shadow: 0px 4px 20px rgba(0,0,0,0.3);
-}
-
-.metric-title {
-    font-size: 14px;
-    color: #9CA3AF;
-}
-
-.metric-value {
-    font-size: 34px;
-    font-weight: bold;
-    color: white;
-}
-
-.metric-change-up {
-    color: #22C55E;
-    font-size: 16px;
-}
-
-.metric-change-down {
-    color: #EF4444;
-    font-size: 16px;
-}
-
-.section-card {
-
-    background: #111827;
-
-    padding: 25px;
-
-    border-radius: 18px;
-
-    margin-top: 20px;
-
-    border: 1px solid rgba(255,255,255,0.06);
-}
-
-.small-text {
-    color: #9CA3AF;
-}
-
-</style>
-""", unsafe_allow_html=True)
 
 # ======================================================
 # LOAD DATA
@@ -102,11 +26,11 @@ forecast["date"] = pd.to_datetime(forecast["date"])
 # SIDEBAR
 # ======================================================
 
-st.sidebar.title("📊 Dashboard Settings")
+st.sidebar.header("Filter")
 
 periode = st.sidebar.selectbox(
 
-    "Pilih Periode",
+    "Periode",
 
     [
         "7 Hari",
@@ -184,14 +108,11 @@ filtered_df["MA30"] = (
 # HEADER
 # ======================================================
 
-st.markdown("""
-<h1 style='font-size:42px;'>
-📈 TLKM Stock Analytics Dashboard
-</h1>
-<p class='small-text'>
-Realtime Market Intelligence • Auto Update 10:00 WIB
-</p>
-""", unsafe_allow_html=True)
+st.title("Dashboard Analisis Saham TLKM")
+
+st.caption(
+    "Data diperbarui otomatis setiap hari pukul 10.00 WIB"
+)
 
 # ======================================================
 # METRICS
@@ -201,246 +122,127 @@ latest_close = filtered_df["close"].iloc[-1]
 previous_close = filtered_df["close"].iloc[-2]
 
 price_change = latest_close - previous_close
+
 percent_change = (
     price_change / previous_close
 ) * 100
 
-volume = filtered_df["volume"].iloc[-1]
-volatility = filtered_df["volatility"].mean()
-
 col1, col2, col3, col4 = st.columns(4)
 
-# ======================================================
-# CARD 1
-# ======================================================
-
-change_class = (
-    "metric-change-up"
-    if percent_change >= 0
-    else "metric-change-down"
+col1.metric(
+    "Latest Price",
+    f"Rp {latest_close:,.0f}",
+    f"{price_change:,.0f} ({percent_change:.2f}%)"
 )
 
-col1.markdown(f"""
-<div class="metric-card">
+col2.metric(
+    "Average Open",
+    f"Rp {filtered_df['open'].mean():,.0f}"
+)
 
-<div class="metric-title">
-Latest Price
-</div>
+col3.metric(
+    "Average Close",
+    f"Rp {filtered_df['close'].mean():,.0f}"
+)
 
-<div class="metric-value">
-Rp {latest_close:,.0f}
-</div>
-
-<div class="{change_class}">
-{price_change:,.0f}
-({percent_change:.2f}%)
-</div>
-
-</div>
-""", unsafe_allow_html=True)
+col4.metric(
+    "Volatility",
+    f"{filtered_df['volatility'].mean():.4f}"
+)
 
 # ======================================================
-# CARD 2
+# CHART HARGA
 # ======================================================
 
-col2.markdown(f"""
-<div class="metric-card">
+st.subheader("Pergerakan Harga Saham")
 
-<div class="metric-title">
-Trading Volume
-</div>
+fig1 = go.Figure()
 
-<div class="metric-value">
-{volume:,.0f}
-</div>
-
-<div class="small-text">
-Latest Market Activity
-</div>
-
-</div>
-""", unsafe_allow_html=True)
-
-# ======================================================
-# CARD 3
-# ======================================================
-
-col3.markdown(f"""
-<div class="metric-card">
-
-<div class="metric-title">
-Average Volatility
-</div>
-
-<div class="metric-value">
-{volatility:.4f}
-</div>
-
-<div class="small-text">
-Rolling Volatility
-</div>
-
-</div>
-""", unsafe_allow_html=True)
-
-# ======================================================
-# CARD 4
-# ======================================================
-
-col4.markdown(f"""
-<div class="metric-card">
-
-<div class="metric-title">
-Highest Price
-</div>
-
-<div class="metric-value">
-Rp {filtered_df['high'].max():,.0f}
-</div>
-
-<div class="small-text">
-Selected Period
-</div>
-
-</div>
-""", unsafe_allow_html=True)
-
-# ======================================================
-# TABS
-# ======================================================
-
-tab1, tab2, tab3, tab4 = st.tabs([
-
-    "📈 Trend",
-
-    "📊 Statistics",
-
-    "⚡ Volatility",
-
-    "🔮 Forecast"
-])
-
-# ======================================================
-# TAB 1
-# ======================================================
-
-with tab1:
-
-    st.markdown("## Trend Analysis")
-
-    fig1 = go.Figure()
-
-    fig1.add_trace(
-        go.Scatter(
-            x=filtered_df["date"],
-            y=filtered_df["close"],
-            mode="lines",
-            name="Close Price",
-            line=dict(width=3)
-        )
+fig1.add_trace(
+    go.Scatter(
+        x=filtered_df["date"],
+        y=filtered_df["close"],
+        name="Close",
+        line=dict(width=3)
     )
+)
 
-    fig1.add_trace(
-        go.Scatter(
-            x=filtered_df["date"],
-            y=filtered_df["MA7"],
-            mode="lines",
-            name="MA7"
-        )
+fig1.add_trace(
+    go.Scatter(
+        x=filtered_df["date"],
+        y=filtered_df["MA7"],
+        name="MA7",
+        line=dict(dash="dot")
     )
+)
 
-    fig1.add_trace(
-        go.Scatter(
-            x=filtered_df["date"],
-            y=filtered_df["MA30"],
-            mode="lines",
-            name="MA30"
-        )
+fig1.add_trace(
+    go.Scatter(
+        x=filtered_df["date"],
+        y=filtered_df["MA30"],
+        name="MA30",
+        line=dict(dash="dash")
     )
+)
 
-    fig1.update_layout(
+fig1.update_layout(
 
-        template="plotly_dark",
+    height=500,
 
-        height=600,
+    template="simple_white",
 
-        paper_bgcolor="#111827",
+    legend=dict(
+        orientation="h"
+    ),
 
-        plot_bgcolor="#111827"
+    margin=dict(
+        l=20,
+        r=20,
+        t=40,
+        b=20
     )
+)
 
-    st.plotly_chart(
-        fig1,
-        use_container_width=True
-    )
+st.plotly_chart(
+    fig1,
+    use_container_width=True
+)
 
 # ======================================================
-# TAB 2
+# ROW 2
 # ======================================================
 
-with tab2:
-
-    st.markdown("## Statistical Analysis")
-
-    stats = pd.DataFrame({
-
-        "Metric": [
-
-            "Average Open",
-            "Average Close",
-            "Highest High",
-            "Lowest Low",
-            "Std Dev Close",
-            "Mean Return"
-        ],
-
-        "Value": [
-
-            round(filtered_df["open"].mean(),2),
-
-            round(filtered_df["close"].mean(),2),
-
-            round(filtered_df["high"].max(),2),
-
-            round(filtered_df["low"].min(),2),
-
-            round(filtered_df["close"].std(),2),
-
-            round(filtered_df["daily_return"].mean(),4)
-        ]
-    })
-
-    st.dataframe(
-        stats,
-        use_container_width=True
-    )
+left, right = st.columns(2)
 
 # ======================================================
-# TAB 3
+# VOLUME
 # ======================================================
 
-with tab3:
+with left:
 
-    st.markdown("## Volatility Analysis")
+    st.subheader("Volume Trading")
 
-    fig2 = px.line(
+    fig2 = px.bar(
 
         filtered_df,
 
         x="date",
 
-        y="volatility"
+        y="volume"
     )
 
     fig2.update_layout(
 
-        template="plotly_dark",
+        height=400,
 
-        height=500,
+        template="simple_white",
 
-        paper_bgcolor="#111827",
-
-        plot_bgcolor="#111827"
+        margin=dict(
+            l=20,
+            r=20,
+            t=40,
+            b=20
+        )
     )
 
     st.plotly_chart(
@@ -449,31 +251,34 @@ with tab3:
     )
 
 # ======================================================
-# TAB 4
+# VOLATILITY
 # ======================================================
 
-with tab4:
+with right:
 
-    st.markdown("## Forecasting (LSTM)")
+    st.subheader("Analisis Volatilitas")
 
     fig3 = px.line(
 
-        forecast,
+        filtered_df,
 
         x="date",
 
-        y="forecast"
+        y="volatility"
     )
 
     fig3.update_layout(
 
-        template="plotly_dark",
+        height=400,
 
-        height=500,
+        template="simple_white",
 
-        paper_bgcolor="#111827",
-
-        plot_bgcolor="#111827"
+        margin=dict(
+            l=20,
+            r=20,
+            t=40,
+            b=20
+        )
     )
 
     st.plotly_chart(
@@ -482,10 +287,81 @@ with tab4:
     )
 
 # ======================================================
-# FOOTER
+# STATISTIK
 # ======================================================
 
-st.markdown("---")
+st.subheader("Analisis Statistik")
+
+stats = pd.DataFrame({
+
+    "Statistik": [
+
+        "Highest Price",
+        "Lowest Price",
+        "Average Open",
+        "Average Close",
+        "Standard Deviation",
+        "Average Return"
+    ],
+
+    "Nilai": [
+
+        round(filtered_df["high"].max(),2),
+
+        round(filtered_df["low"].min(),2),
+
+        round(filtered_df["open"].mean(),2),
+
+        round(filtered_df["close"].mean(),2),
+
+        round(filtered_df["close"].std(),2),
+
+        round(filtered_df["daily_return"].mean(),4)
+    ]
+})
+
+st.dataframe(
+    stats,
+    use_container_width=True
+)
+
+# ======================================================
+# FORECAST
+# ======================================================
+
+st.subheader("Forecast 30 Hari (LSTM)")
+
+fig4 = px.line(
+
+    forecast,
+
+    x="date",
+
+    y="forecast"
+)
+
+fig4.update_layout(
+
+    height=500,
+
+    template="simple_white",
+
+    margin=dict(
+        l=20,
+        r=20,
+        t=40,
+        b=20
+    )
+)
+
+st.plotly_chart(
+    fig4,
+    use_container_width=True
+)
+
+# ======================================================
+# FOOTER
+# ======================================================
 
 st.caption(
     f"Last Updated : {today}"
