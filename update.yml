@@ -1,0 +1,33 @@
+
+
+name: Update Stock Data
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+
+  workflow_dispatch:
+
+jobs:
+  update-data:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+
+        with:
+          python-version: '3.11'
+
+      - name: Install libraries
+        run: |
+          pip install yfinance pandas numpy tensorflow scikit-learn
+
+      - name: Run update script
+        run: python update_data.py
+
